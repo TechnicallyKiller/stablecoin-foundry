@@ -35,30 +35,33 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 * Governed  by DSCEngine : Just Implementation of ERC20 Contract
 */
  
- contract DecentralisedSTC is ERC20Burnable,Ownable{
+
+contract DecentralisedSTC is ERC20Burnable, Ownable {
     error DSTC_MUST_BE_MORE_THAN_ZERO();
     error DSTC_ExceedsBurnAmount();
     error DSTC_NotZeroAddress();
-     constructor() ERC20 ("DecentralisedSTC1","DSTC"){}
 
-     function burn(uint256 _amount) public override onlyOwner{
+    constructor() ERC20("DecentralisedSTC1", "DSTC") Ownable(msg.sender) {}
+
+    function burn(uint256 _amount) public override onlyOwner {
         uint256 balance = balanceOf(msg.sender);
-        if(_amount <=0){
+        if (_amount <= 0) {
             revert DSTC_MUST_BE_MORE_THAN_ZERO();
         }
-        if(_amount>=balance){
+        if (_amount > balance) {
             revert DSTC_ExceedsBurnAmount();
         }
         super.burn(_amount);
-     }
-     function mint(address _to , uint256 amount) external onlyOwner returns(bool){
-        if(_to==address(0)){
+    }
+
+    function mint(address _to, uint256 amount) external onlyOwner returns (bool) {
+        if (_to == address(0)) {
             revert DSTC_NotZeroAddress();
         }
-        if(amount<=0){
+        if (amount <= 0) {
             revert DSTC_MUST_BE_MORE_THAN_ZERO();
         }
-        _mint(_to,amount);
+        _mint(_to, amount);
         return true;
-     }
- }
+    }
+}
