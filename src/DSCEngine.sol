@@ -8,6 +8,7 @@ import {ERC20Burnable, ERC20} from "@openzeppelin/contracts/token/ERC20/extensio
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AggregatorV3Interface} from "../lib/chainlink-brownie-contracts/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 // Layout of Contract:
 // version
 // imports
@@ -161,10 +162,16 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
          for(uint256 i = 0; i < s_collateralTokens.length; i++){
         address token = s_collateralTokens[i];
         uint256 amount = s_collatDeposited[user][token];
-        totalCollateralValueInUsd += amount;
+        totalCollateralValueInUsd += getUsdValue(token,amount);
            }
         return totalCollateralValueInUsd;
         }
+    
+    function getUsdValue(address token, uint256 amount) public view returns(uint256){
+    AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeed[token]);
+    (,int256 price,,,) = priceFeed.latestRoundData();
+    return ((uint256(price* 1e10)*amount)/ 1e18);
+}
 
 
 
