@@ -43,7 +43,10 @@ error DSCEngine_transferFailed();
 
 mapping(address token => address pricefeed) private s_priceFeed;
 mapping(address user => mapping(address token => uint256 amount)) private s_collatDeposited;
+mapping(address user=> uint256 amounttoMint) private s_amountToMint;
+mapping(address user => uint256 DSCMinted) private s_DSCMinted;
 DecentralisedSTC private i_dsc; //token to pricefeed
+address[] private s_collateralTokens;
 
 ///////////////////
 //   EVENTS  //
@@ -81,6 +84,7 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
     }
     for(uint256 i=0;i< tokenAdresses.length;i++){
         s_priceFeed[tokenAdresses[i]]=pricefeedAddressess[i];
+        s_collateralTokens.push(tokenAdresses[i]);
     }
     i_dsc= DecentralisedSTC(DscAddress);
 
@@ -115,11 +119,53 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
 
     function redeemCollateral() external {}
 
-    function mintDsc() external {}
+    /*
+    * @notice follows CEI
+    * @params amountToMintDSC the amount of decentralised stable coin to mint
+    * @notice they must have more collateral value than the threshold
+    */
+
+    function mintDsc(uint256 amountToMintDSC) external morethanZero(amountToMintDSC) nonReentrant {
+
+    }
 
     function burnDsc() external {}
 
     function liquidate() external {}
 
     function getHealthFactor() external view {}
+
+    ///////////////////////////
+    //    Internal Functions  //
+    ///////////////////////////
+    function _getinfo(address user) private view returns(uint256 totalDscMinted , uint256 collateralvalueinUsd){
+        uint256 totalDscMinted= s_DSCMinted[user];
+
+    }
+
+    function _HealthFactor(address user) internal view returns(uint256){
+        // total dsc minted , total collateral value
+        (uint256 totalDscMinted , uint256 collateralvalueInUSD)=_getinfo(user);
+
+    }
+
+    function _revertifHealthFactorisBroken (address user) internal view{
+        // check if they have enough collateral(health factor)
+        // revert if they dont
+    }
+    //////////////////////////////////////////
+//   Public & External View Functions   //
+//////////////////////////////////////////
+
+    function getAccountCollateralValue(address user) public view returns (uint256 totalCollateralValueInUsd) {
+         for(uint256 i = 0; i < s_collateralTokens.length; i++){
+        address token = s_collateralTokens[i];
+        uint256 amount = s_collatDeposited[user][token];
+        totalCollateralValueInUsd += amount;
+           }
+        return totalCollateralValueInUsd;
+        }
+
+
+
 }
