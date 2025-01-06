@@ -137,6 +137,7 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
     function mintDsc(uint256 amountToMintDSC) external morethanZero(amountToMintDSC) nonReentrant {
         s_DSCMinted[msg.sender]+=amountToMintDSC;
         _revertifHealthFactorisBroken(msg.sender);
+        bool minted = i_dsc.mint(msg.sender, amountToMintDSC);
     }
 
     function burnDsc() external {}
