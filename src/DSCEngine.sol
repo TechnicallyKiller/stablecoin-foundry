@@ -138,6 +138,7 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
         s_DSCMinted[msg.sender]+=amountToMintDSC;
         _revertifHealthFactorisBroken(msg.sender);
         bool minted = i_dsc.mint(msg.sender, amountToMintDSC);
+        
     }
 
     function burnDsc() external {}
@@ -159,7 +160,7 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
     function _HealthFactor(address user) internal view returns(uint256){
         // total dsc minted , total collateral value
         (uint256 totalDscMinted , uint256 collateralvalueInUSD)=_getinfo(user);
-        uint256 collatAdjustedforThres= (totalDscMinted*LIQUIDATION_THRESHOLD)/LIQUIDATION_PRECISION;
+        uint256 collatAdjustedforThres= (collateralvalueInUSD*LIQUIDATION_THRESHOLD)/LIQUIDATION_PRECISION;
         return (collatAdjustedforThres* 1e18 /totalDscMinted);
 
     }
@@ -191,7 +192,7 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
     AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeed[token]);
     (,int256 price,,,) = priceFeed.latestRoundData();
     return ((uint256(price* 1e10)*amount)/ 1e18);
-}
+    }
 
 
 
