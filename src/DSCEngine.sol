@@ -37,6 +37,7 @@ error DSCEngine_lessthanZero();
 error DSCEngine_NOTallowedToken();
 error DSCEngine_pricefeedaddresss_Notequal_tokenaddress_length();
 error DSCEngine_transferFailed();
+error DSCEngine_BreakHealthFactor(uint256 userHealthFac);
 
 ///////////////////
 //  State Variables  //
@@ -48,6 +49,13 @@ mapping(address user=> uint256 amounttoMint) private s_amountToMint;
 mapping(address user => uint256 DSCMinted) private s_DSCMinted;
 DecentralisedSTC private i_dsc; //token to pricefeed
 address[] private s_collateralTokens;
+
+uint256 private LIQUIDATION_THRESHOLD =50;//200% COLLATERISED
+uint256 private LIQUIDATION_PRECISION=100;
+uint256 private MIN_HEALTH_FACTOR=1;
+
+
+
 
 ///////////////////
 //   EVENTS  //
@@ -127,7 +135,8 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
     */
 
     function mintDsc(uint256 amountToMintDSC) external morethanZero(amountToMintDSC) nonReentrant {
-
+        s_DSCMinted[msg.sender]+=amountToMintDSC;
+        _revertifHealthFactorisBroken(msg.sender);
     }
 
     function burnDsc() external {}
@@ -141,18 +150,27 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
     ///////////////////////////
     function _getinfo(address user) private view returns(uint256 totalDscMinted , uint256 collateralvalueinUsd){
         uint256 totalDscMinted= s_DSCMinted[user];
+        uint collateralvalueinUsd = getAccountCollateralValue(user);
+        return (totalDscMinted,collateralvalueinUsd);
 
     }
 
     function _HealthFactor(address user) internal view returns(uint256){
         // total dsc minted , total collateral value
         (uint256 totalDscMinted , uint256 collateralvalueInUSD)=_getinfo(user);
+        uint256 collatAdjustedforThres= (totalDscMinted*LIQUIDATION_THRESHOLD)/LIQUIDATION_PRECISION;
+        return (collatAdjustedforThres* 1e18 /totalDscMinted);
 
     }
 
     function _revertifHealthFactorisBroken (address user) internal view{
         // check if they have enough collateral(health factor)
         // revert if they dont
+        uint256 userHealthfactor= _HealthFactor(user);
+        if(userHealthfactor< MIN_HEALTH_FACTOR){
+            revert DSCEngine_BreakHealthFactor(userHealthfactor);
+        }
+
     }
     //////////////////////////////////////////
 //   Public & External View Functions   //
@@ -166,6 +184,7 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
            }
         return totalCollateralValueInUsd;
         }
+
     
     function getUsdValue(address token, uint256 amount) public view returns(uint256){
     AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeed[token]);
