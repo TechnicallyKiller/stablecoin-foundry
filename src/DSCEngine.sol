@@ -38,6 +38,7 @@ error DSCEngine_NOTallowedToken();
 error DSCEngine_pricefeedaddresss_Notequal_tokenaddress_length();
 error DSCEngine_transferFailed();
 error DSCEngine_BreakHealthFactor(uint256 userHealthFac);
+error DSCEngine_failedMint();
 
 ///////////////////
 //  State Variables  //
@@ -102,7 +103,7 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
 ///////////////////////////
 //   External Functions  //
 ///////////////////////////
-    function depositCollaterAndMintDsc() external {}
+    
     /*
     * @param tokenCollateralAddress the address of token to deposit as collateral
     * @param amountCollateral  the amount to deposit
@@ -111,7 +112,7 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
     function depositCollateral(
         address tokenCollateralAddress,
         uint256 amountCollateral
-    ) external morethanZero(amountCollateral)
+    ) public morethanZero(amountCollateral)
             isAllowedToken(tokenCollateralAddress)
             nonReentrant
      {
@@ -134,11 +135,20 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
     * @notice they must have more collateral value than the threshold
     */
 
-    function mintDsc(uint256 amountToMintDSC) external morethanZero(amountToMintDSC) nonReentrant {
+    function mintDsc(uint256 amountToMintDSC) public morethanZero(amountToMintDSC) nonReentrant {
         s_DSCMinted[msg.sender]+=amountToMintDSC;
         _revertifHealthFactorisBroken(msg.sender);
         bool minted = i_dsc.mint(msg.sender, amountToMintDSC);
+
+        if(!minted){
+            revert DSCEngine_failedMint();
+        }
         
+    }
+
+    function depositCollaterAndMintDsc(address tokenCollatAddress , uint256 amountCollateral, uint256 amountDsctoMint) external {
+        depositCollateral(tokenCollatAddress,amountCollateral);
+        mintDsc(amountDsctoMint);
     }
 
     function burnDsc() external {}
@@ -188,12 +198,13 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
         }
 
     
-    function getUsdValue(address token, uint256 amount) public view returns(uint256){
+    function getUsdValue(address token, uint256 amount) public view returns(uint256) {
     AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeed[token]);
-    (,int256 price,,,) = priceFeed.latestRoundData();
-    return ((uint256(price* 1e10)*amount)/ 1e18);
-    }
-
-
-
+    (, int256 price,,,) = priceFeed.latestRoundData();
+    // Both price and amount have 18 decimals, so we divide by 1e18
+    return ((uint256(price) * 1e10) * amount) / 1e18; // Scale price to 18 decimals
+}
+    function getPriceFeed(address token) public view returns (address) {
+    return s_priceFeed[token];
+}
 }
