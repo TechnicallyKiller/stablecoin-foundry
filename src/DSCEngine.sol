@@ -63,6 +63,7 @@ uint256 private MIN_HEALTH_FACTOR=1;
 ///////////////////
 
 event CollateralDeposited(address indexed depositor , address indexed token , uint256 deposited);
+event CollatRedeem(address indexed user , address indexed token , uint256 amount);
 
 
 ///////////////////
@@ -127,7 +128,23 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
 
     function redeemCollateralForDsc() external {}
 
-    function redeemCollateral() external {}
+    /*
+    * TWO STEP FUNC (BURN DSC -> REDEEM COLLAT)
+    * ALSO NEED TO CHECK HEALTHFACTOR ABOVE 1 AFTER COLLAT REDEEMED
+
+    */
+
+    function redeemCollateral(address tokenCollateralAddress,uint256 amountCollat) external nonReentrant morethanZero(amountCollat) {
+        s_collatDeposited[msg.sender][tokenCollateralAddress]-=amountCollat;
+        emit CollatRedeem(msg.sender,tokenCollateralAddress,amountCollat);
+
+        bool success= IERC20(tokenCollateralAddress).transfer(msg.sender,amountCollat);
+        if(!success){
+            revert DSCEngine_transferFailed();
+        }
+
+
+    }
 
     /*
     * @notice follows CEI
@@ -151,7 +168,13 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
         mintDsc(amountDsctoMint);
     }
 
-    function burnDsc() external {}
+    function burnDsc(uint256 DscAmount) external nonReentrant morethanZero(DscAmount){
+        s_DSCMinted[msg.sender]-=DscAmount;
+        bool success = i_dsc.transferFrom(msg.sender,address(this),DscAmount);
+        if(!success){
+            revert DSCEngine_transferFailed();
+        }
+    }
 
     function liquidate() external {}
 
@@ -161,9 +184,9 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
     //    Internal Functions  //
     ///////////////////////////
     function _getinfo(address user) private view returns(uint256 totalDscMinted , uint256 collateralvalueinUsd){
-        uint256 totalDscMinted= s_DSCMinted[user];
-        uint collateralvalueinUsd = getAccountCollateralValue(user);
-        return (totalDscMinted,collateralvalueinUsd);
+        uint256 totalDscMinted1= s_DSCMinted[user];
+        uint collateralvalueinUsd1 = getAccountCollateralValue(user);
+        return (totalDscMinted1,collateralvalueinUsd1);
 
     }
 
