@@ -9,7 +9,13 @@ import {HelperConfig} from "../script/HelperConfig.s.sol";
 import {console} from "../lib/forge-std/src/console.sol";
 import {AggregatorV3Interface} from "../lib/chainlink-brownie-contracts/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 // Layout of Contract:
-
+//  struct NetworkConfig {
+//         address wbtc;
+//         address weth;
+//         address wethUSDpricefeed;
+//         address wbtcUSDpricefeed;
+//         uint256 deployerKey;
+//     }
 
 contract DSCEngineTest is Test {
     DeploymentDSTC deployer;
@@ -18,15 +24,33 @@ contract DSCEngineTest is Test {
     HelperConfig config;
     address weth;
     address wethUsdfeed;
+    address wbtc;
+    address wbtcUSDpriceFeed;
+    address[] public TokenAddresses;
+    address[] public PriceFeedAddresses;
 
     function setUp() public {
         deployer = new DeploymentDSTC();
         (dsc,dscEngine,config)= deployer.run();
-        (,weth,wethUsdfeed,,)=config.activeConfig();
+        (wbtc,weth,wethUsdfeed,wbtcUSDpriceFeed,)=config.activeConfig();
         
     }
+     /////////////////
+    // Constructor Tests //
+    /////////////////
 
-        /////////////////
+
+    function testRevertifTokenLnDoesntMatchPriceFeeds() public {
+        TokenAddresses.push(weth);
+        PriceFeedAddresses.push(wethUsdfeed);
+        PriceFeedAddresses.push(wbtcUSDpriceFeed);
+
+        vm.expectRevert(DSCEngine.DSCEngine_pricefeedaddresss_Notequal_tokenaddress_length.selector);
+        new DSCEngine(TokenAddresses,PriceFeedAddresses,address(dsc));
+    }
+
+
+     /////////////////
     // Price Tests //
     /////////////////
     function testGetUsdValue() public {
