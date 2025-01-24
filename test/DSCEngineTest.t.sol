@@ -7,6 +7,7 @@ import {DSCEngine} from "../src/DSCEngine.sol";
 import {DecentralisedSTC} from "../src/DecentralisedSTC.sol";
 import {HelperConfig} from "../script/HelperConfig.s.sol";
 import {console} from "../lib/forge-std/src/console.sol";
+import {ERC20Mock} from "../lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 import {AggregatorV3Interface} from "../lib/chainlink-brownie-contracts/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 // Layout of Contract:
 //  struct NetworkConfig {
@@ -29,10 +30,15 @@ contract DSCEngineTest is Test {
     address[] public TokenAddresses;
     address[] public PriceFeedAddresses;
 
+    address public USER = makeAddr("user");
+    uint256 public constant AMOUNT_COLLATERAL = 10 ether;
+    uint256 public constant STARTING_ACCOUNT_BAL=10 ether;
+
     function setUp() public {
         deployer = new DeploymentDSTC();
         (dsc,dscEngine,config)= deployer.run();
         (wbtc,weth,wethUsdfeed,wbtcUSDpriceFeed,)=config.activeConfig();
+        ERC20Mock(weth).mint(USER,STARTING_ACCOUNT_BAL);
         
     }
      /////////////////
@@ -53,7 +59,7 @@ contract DSCEngineTest is Test {
      /////////////////
     // Price Tests //
     /////////////////
-    function testGetUsdValue() public {
+    function testGetUsdValue() public view  {
     // Add debug logs
     console.log("WETH address:", weth);
     console.log("WETH/USD Price Feed address:", wethUsdfeed);
@@ -67,6 +73,22 @@ contract DSCEngineTest is Test {
     uint256 actualUsd = dscEngine.getUsdValue(weth, ethAmount);
     assertEq(expectedUsd, actualUsd);
 }
+
+    function testGetUsdValuefromToken() public view {
+
+        uint256 usdAmount = 100 ether;
+        uint256 expectedWeth= 0.05 ether;
+        uint256 actualWeth = dscEngine.getTokenAmountfromUSD(weth,usdAmount);
+        assertEq(expectedWeth,actualWeth);
+    }
+
+    function testRevertsIfCollateralZero() public {
+        vm.startPrank(USER);
+        ERC20Mock(weth).approve(address(dscEngine),AMOUNT_COLLATERAL);
+        vm.expectRevert(DSCEngine.DSCEngine_lessthanZero.selector);
+        dscEngine.depositCollateral(weth,0);
+        vm.stopPrank();
+    }
 
 
 }
