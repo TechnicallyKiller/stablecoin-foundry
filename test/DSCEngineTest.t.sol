@@ -61,7 +61,7 @@ contract DSCEngineTest is Test {
     /////////////////
     function testGetUsdValue() public view  {
     // Add debug logs
-    console.log("WETH address:", weth);
+    console.log("WETH  :", weth);
     console.log("WETH/USD Price Feed address:", wethUsdfeed);
     
     // Get price feed mapping value
@@ -89,6 +89,30 @@ contract DSCEngineTest is Test {
         dscEngine.depositCollateral(weth,0);
         vm.stopPrank();
     }
+    
+    function testRevertswithUnapprovedCollat() public{
+        ERC20Mock RANToken = new ERC20Mock("RAN", "RAN", USER , AMOUNT_COLLATERAL);
+        vm.startPrank(USER);
+        vm.expectRevert(DSCEngine.DSCEngine_NOTallowedToken.selector);
+        dscEngine.depositCollateral(address(RANToken),AMOUNT_COLLATERAL);
+        vm.stopPrank();
+    }
+    modifier depositCollateral {
+        vm.startPrank(USER);
+        ERC20Mock(weth).approve(address(dscEngine),AMOUNT_COLLATERAL);
+        dscEngine.depositCollateral(weth, AMOUNT_COLLATERAL);
+        vm.stopPrank();
+        _;
+
+        
+    }
+
+
+    function testCanDepositCollateralandGetAccInfo() public depositCollateral{
+        (uint256 collateral , uint256 debt)=dscEngine.getinfo(USER);
+    }
+        
+    
 
 
 }

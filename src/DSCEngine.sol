@@ -249,6 +249,12 @@ function liquidate(address collateral, address user, uint256 debtToCover) extern
         return (totalDscMinted1,collateralvalueinUsd1);
 
     }
+    function _calcHealthFac(uint256 DSC_MINTED, uint256 totalCollatDep) internal view returns(uint256 healthfac){
+        if(DSC_MINTED==0) return type(uint256).max;
+
+        uint256 collatAdjustedforThres= (totalCollatDep*LIQUIDATION_THRESHOLD)/LIQUIDATION_PRECISION;
+        return (collatAdjustedforThres* 1e18 /DSC_MINTED);
+    }
 
     function _HealthFactor(address user) internal view returns(uint256){
         // total dsc minted , total collateral value
@@ -299,4 +305,12 @@ function liquidate(address collateral, address user, uint256 debtToCover) extern
 
 
     }
+
+    
+    function getinfo( address user) external view returns(uint256 totalDscMinted , uint256 collateralvalueinUsd){
+        (totalDscMinted,collateralvalueinUsd)= _getinfo(user);
+        return(totalDscMinted, collateralvalueinUsd);
+
+    }
+
 }
