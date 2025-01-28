@@ -259,9 +259,9 @@ function liquidate(address collateral, address user, uint256 debtToCover) extern
     function _HealthFactor(address user) internal view returns(uint256){
         // total dsc minted , total collateral value
         (uint256 totalDscMinted , uint256 collateralvalueInUSD)=_getinfo(user);
-        uint256 collatAdjustedforThres= (collateralvalueInUSD*LIQUIDATION_THRESHOLD)/LIQUIDATION_PRECISION;
-        return (collatAdjustedforThres* 1e18 /totalDscMinted);
-
+       return(
+        _calcHealthFac(totalDscMinted,collateralvalueInUSD)
+       );
     }
 
     function _revertifHealthFactorisBroken (address user) internal view{
