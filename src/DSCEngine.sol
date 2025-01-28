@@ -256,7 +256,7 @@ function liquidate(address collateral, address user, uint256 debtToCover) extern
         return (collatAdjustedforThres* 1e18 /DSC_MINTED);
     }
 
-    function _HealthFactor(address user) internal view returns(uint256){
+    function _HealthFactor(address user) private view returns(uint256){
         // total dsc minted , total collateral value
         (uint256 totalDscMinted , uint256 collateralvalueInUSD)=_getinfo(user);
        return(
@@ -312,5 +312,45 @@ function liquidate(address collateral, address user, uint256 debtToCover) extern
         return(totalDscMinted, collateralvalueinUsd);
 
     }
+
+    function getPrecision() external pure returns (uint256) {
+    return PRECISION;
+}
+
+function getAdditionalFeedPrecision() external pure returns (uint256) {
+    return ADDITIONAL_FEED_PRECISION;
+}
+
+function getLiquidationThreshold() external view returns(uint256){
+    return LIQUIDATION_THRESHOLD;
+}
+
+function getLiquidationBonus() external view returns(uint256){
+    return LIQUIDATION_BONUS;
+}
+
+function getLiquidationPrecision() external view returns(uint256) {
+    return LIQUIDATION_PRECISION;
+}
+
+function getMinHealthFactor() external view returns(uint256){
+    return MIN_HEALTH_FACTOR;
+}
+
+function getCollateralTokens() external view returns (address[] memory) {
+    return s_collateralTokens;
+}
+
+function getDsc() external view returns (address) {
+    return address(i_dsc);
+}
+
+function getCollateralTokenPriceFeed(address token) external view returns (address) {
+    return s_priceFeed[token];
+}
+
+function getHealthFactor(address user) external view returns (uint256) {
+    return _HealthFactor(user);
+}
 
 }
