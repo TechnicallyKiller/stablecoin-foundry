@@ -9,6 +9,8 @@ import {DecentralisedSTC} from "../src/DecentralisedSTC.sol";
 import {DSCEngine} from "../src/DSCEngine.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {console} from "forge-std/console.sol";
+import {Handler} from "./Handler.t.sol";
+
 
 contract InvariantTest is StdInvariant, Test {
     // Layout of Contract:
@@ -24,6 +26,7 @@ contract InvariantTest is StdInvariant, Test {
     DSCEngine dsce;
     DecentralisedSTC dsc;
     HelperConfig config;
+    Handler handler;
     address wbtc;
     address weth;
 
@@ -36,14 +39,15 @@ contract InvariantTest is StdInvariant, Test {
 
    (wbtc, weth, ,,) = config.activeConfig();
      // Ensure dsce has WETH and WBTC
-    deal(weth, address(dsce), 10e18);
-    deal(wbtc, address(dsce), 5e8);
+    // deal(weth, address(dsce), 10e18);
+    // deal(wbtc, address(dsce), 5e8);
     console.log("WETH Address:", weth);
     console.log("WBTC Address:", wbtc);
     console.log("DSCE Address:", address(dsce));
     console.log("DSC Address:", address(dsc));
 
-    targetContract(address(dsce));
+    handler = new Handler(dsce, dsc);
+    targetContract(address(handler));
 }
 
 

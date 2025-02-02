@@ -41,11 +41,31 @@ contract Handler is Test {
     // mint and approve!
     vm.startPrank(msg.sender);
     collateral.mint(msg.sender, amountCollateral);
-    collateral.approve(address(dsce), amountCollateral);
+    collateral.approve(address(dsce), amountCollateral); 
 
     dsce.depositCollateral(address(collateral), amountCollateral);
     vm.stopPrank();
+
 }
+
+    function redeemCollateral (uint256 collateralseed , uint256 amountCollateralToRedeem) public {
+        ERC20Mock collateral = _getCollatseed(collateralseed);
+        uint256 maxCollateralToRedeem= dsce.getCollateralBalanceOfUser(address(collateral), msg.sender);
+        amountCollateralToRedeem = bound(amountCollateralToRedeem,0,maxCollateralToRedeem);
+        if(amountCollateralToRedeem==0){
+            return ;
+        }
+        dsce.redeemCollateral(address(collateral), amountCollateralToRedeem);
+
+    }
+
+    function mintDsc(uint256 amount) public {
+        amount = bound(amount,1,MAX_DEPOSIT_SIZE);
+        vm.startPrank(msg.sender);
+        dsce.mintDsc(amount);
+        vm.stopPrank();
+    }
+
 
 
 }

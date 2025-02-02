@@ -329,6 +329,12 @@ function liquidate(address collateral, address user, uint256 debtToCover) extern
         return LIQUIDATION_BONUS;
     }
 
+    function getCollateralBalanceOfUser(address collateral, address user) external view returns(uint256){
+
+        return s_collatDeposited[user][collateral];
+
+    }
+
     function getLiquidationPrecision() external view returns(uint256) {
         return LIQUIDATION_PRECISION;
     }
