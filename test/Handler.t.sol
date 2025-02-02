@@ -6,6 +6,7 @@ import {DSCEngine} from "../src/DSCEngine.sol";
 import {DecentralisedSTC} from "../src/DecentralisedSTC.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
+import {console} from "forge-std/console.sol";
 
 
 
@@ -16,6 +17,8 @@ contract Handler is Test {
     ERC20Mock weth;
     ERC20Mock wbtc;
     uint256 MAX_DEPOSIT_SIZE = type(uint96).max;
+    uint256 public timeMintisCalled;
+    address[] usersWithCollateralDeposited;
 
     constructor( DSCEngine _dsce , DecentralisedSTC _dsc) 
     {
@@ -46,6 +49,8 @@ contract Handler is Test {
     dsce.depositCollateral(address(collateral), amountCollateral);
     vm.stopPrank();
 
+    usersWithCollateralDeposited.push(msg.sender);
+
 }
 
     function redeemCollateral (uint256 collateralseed , uint256 amountCollateralToRedeem) public {
@@ -55,15 +60,37 @@ contract Handler is Test {
         if(amountCollateralToRedeem==0){
             return ;
         }
+        console.log("Collateral Type:", address(collateral));
+console.log("User's Max Collateral:", maxCollateralToRedeem);
+console.log("Requested Collateral Redemption:", amountCollateralToRedeem);
+
         dsce.redeemCollateral(address(collateral), amountCollateralToRedeem);
 
     }
 
-    function mintDsc(uint256 amount) public {
-        amount = bound(amount,1,MAX_DEPOSIT_SIZE);
-        vm.startPrank(msg.sender);
+    function mintDsc(uint256 amount, uint256 addressSeed) public {
+        address sender = usersWithCollateralDeposited[addressSeed% usersWithCollateralDeposited.length];
+        console.log("Minting DSC:", amount);
+
+        if(usersWithCollateralDeposited.length ==0){
+            return;
+        }
+
+        (uint256 totalDscMinted , uint256 collateralvalueinUsd)= dsce.getinfo(msg.sender);
+        uint256 maxDscToMint = (collateralvalueinUsd/2)-totalDscMinted;
+        if(maxDscToMint<0){
+            return;
+        }
+         vm.startPrank(sender);
+        amount = bound(amount,0,maxDscToMint);
+        if(amount==0){
+            return;
+        }
         dsce.mintDsc(amount);
+    
         vm.stopPrank();
+
+        timeMintisCalled++;
     }
 
 

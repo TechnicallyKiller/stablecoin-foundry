@@ -9,6 +9,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AggregatorV3Interface} from "../lib/chainlink-brownie-contracts/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {console} from "forge-std/console.sol";
 // Layout of Contract:
 // version
 // imports
@@ -110,14 +111,29 @@ constructor(address[] memory tokenAdresses, address[] memory pricefeedAddressess
 ///////////////////////////////////////////
 
 function _redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral, address from, address to) private {
-    s_collatDeposited[from][tokenCollateralAddress] -= amountCollateral;
-    emit CollatRedeem(from, to , tokenCollateralAddress, amountCollateral);
+    uint256 currentBalance = s_collatDeposited[from][tokenCollateralAddress];
 
-    bool success = IERC20(tokenCollateralAddress).transfer( to, amountCollateral);
-    if(!success){
+    console.log("Redeeming Collateral for User:", from);
+    console.log("Token Address:", tokenCollateralAddress);
+    console.log("Current Collateral Balance:", currentBalance);
+    console.log("Requested Redemption Amount:", amountCollateral);
+
+    if (currentBalance < amountCollateral) {
+        console.log("Redemption failed: Insufficient collateral.");
+        revert("Insufficient collateral to redeem");
+    }
+
+    s_collatDeposited[from][tokenCollateralAddress] -= amountCollateral;
+    emit CollatRedeem(from, to, tokenCollateralAddress, amountCollateral);
+
+    bool success = IERC20(tokenCollateralAddress).transfer(to, amountCollateral);
+    if (!success) {
         revert DSCEngine_transferFailed();
     }
 }
+
+
+
 function _burnDsc(uint256 DsctoBeBurned, address onBehalfof , address dscFrom) private{
      s_DSCMinted[onBehalfof]-=DsctoBeBurned;
         bool success = i_dsc.transferFrom(dscFrom,address(this),DsctoBeBurned);
@@ -153,9 +169,10 @@ function _burnDsc(uint256 DsctoBeBurned, address onBehalfof , address dscFrom) p
     }
 
     function redeemCollateralForDsc(address tokenCollateralAddress, uint256 amountCollat , uint256 DscToBurn) external {
-        burnDsc(DscToBurn);
-        redeemCollateral(tokenCollateralAddress,amountCollat);
-    }
+    _burnDsc(DscToBurn, msg.sender, msg.sender);
+    _redeemCollateral(tokenCollateralAddress, amountCollat, msg.sender, msg.sender);
+}
+
 
     /*
     * TWO STEP FUNC (BURN DSC -> REDEEM COLLAT)
@@ -251,9 +268,11 @@ function liquidate(address collateral, address user, uint256 debtToCover) extern
     }
     function _calcHealthFac(uint256 DSC_MINTED, uint256 totalCollatDep) internal view returns(uint256 healthfac){
         if(DSC_MINTED==0) return type(uint256).max;
+        if (totalCollatDep ==0) return 0;
 
         uint256 collatAdjustedforThres= (totalCollatDep*LIQUIDATION_THRESHOLD)/LIQUIDATION_PRECISION;
         return (collatAdjustedforThres* 1e18 /DSC_MINTED);
+
     }
 
     function _HealthFactor(address user) private view returns(uint256){
@@ -290,8 +309,12 @@ function liquidate(address collateral, address user, uint256 debtToCover) extern
     function getUsdValue(address token, uint256 amount) public view returns(uint256) {
     AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeed[token]);
     (, int256 price,,,) = priceFeed.latestRoundData();
+    console.log("Token:", token);
+    console.log("Price:", price);
+    console.log("Amount:", amount);
     // Both price and amount have 18 decimals, so we divide by 1e18
-    return ((uint256(price) * 1e10) * amount) / 1e18; // Scale price to 18 decimals
+    return ((uint256(price) * ADDITIONAL_FEED_PRECISION) * amount) / PRECISION;
+ // Scale price to 18 decimals
 }
     function getPriceFeed(address token) public view returns (address) {
     return s_priceFeed[token];
@@ -334,6 +357,10 @@ function liquidate(address collateral, address user, uint256 debtToCover) extern
         return s_collatDeposited[user][collateral];
 
     }
+    function getUserCollateralBalance(address user, address token) external view returns (uint256) {
+    return s_collatDeposited[user][token];
+}
+
 
     function getLiquidationPrecision() external view returns(uint256) {
         return LIQUIDATION_PRECISION;
