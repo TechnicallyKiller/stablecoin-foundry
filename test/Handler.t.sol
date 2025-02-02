@@ -9,11 +9,13 @@ import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 
 
 
+
 contract Handler is Test {
     DSCEngine dsce;
     DecentralisedSTC dsc;
     ERC20Mock weth;
     ERC20Mock wbtc;
+    uint256 MAX_DEPOSIT_SIZE = type(uint96).max;
 
     constructor( DSCEngine _dsce , DecentralisedSTC _dsc) 
     {
@@ -32,11 +34,18 @@ contract Handler is Test {
             return wbtc;
         }
     }
-    function depositCollateral(uint256 collateralseed , uint256 amountcollat) public {
-        ERC20Mock collateral = _getCollatseed(collateralseed);
+    function depositCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
+    amountCollateral = bound(amountCollateral, 1, MAX_DEPOSIT_SIZE);
+    ERC20Mock collateral = _getCollatseed(collateralSeed);
 
-        dsce.depositCollateral(address(collateral) , amountcollat);
-    }
+    // mint and approve!
+    vm.startPrank(msg.sender);
+    collateral.mint(msg.sender, amountCollateral);
+    collateral.approve(address(dsce), amountCollateral);
+
+    dsce.depositCollateral(address(collateral), amountCollateral);
+    vm.stopPrank();
+}
 
 
 }
